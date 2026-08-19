@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>漫长的季节 · 雨中独白</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <style>
+        /* ===== 全局重置 & 基础 ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.02);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(180, 160, 200, 0.2);
+            border-radius: 4px;
+        }
+
+        body {
+            font-family: 'Noto Serif SC', 'Crimson Text', serif;
+            background: #08080c;
+            color: #c8c0d0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            padding: 24px 16px 40px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* ===== 动态雨景 Canvas ===== */
+        #rainCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+            /* 让鼠标事件穿透 */;
+        }
+
+        /* ===== 主容器 ===== */
+        .container {
+            max-width: 700px;
+            width: 100%;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ===== 头部 ===== */
+        .header {
+            text-align: center;
+            padding: 28px 0 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            margin-bottom: 24px;
+            position: relative;
+        }
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 25%;
+            right: 25%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(180, 160, 200, 0.15), transparent);
+        }
+        .header .logo {
+            font-size: 32px;
+            font-weight: 300;
+            letter-spacing: 10px;
+            color: #e0d8e8;
+            text-shadow: 0 0 60px rgba(120, 100, 160, 0.1);
+        }
+        .header .logo i {
+            color: rgba(180, 150, 210, 0.2);
+            margin-right: 8px;
+            font-size: 26px;
+        }
+        .header .sub {
+            font-size: 14px;
+            font-weight: 300;
+            color: rgba(180, 170, 190, 0.35);
+            letter-spacing: 6px;
+            margin-top: 10px;
+            font-style: italic;
+        }
+        .header .sub::before,
+        .header .sub::after {
+            content: '·';
+            margin: 0 12px;
+            color: rgba(180, 170, 190, 0.15);
+        }
+
+        /* ===== 用户信息 ===== */
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 14px 20px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            margin-bottom: 24px;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+        }
+        .user-info .avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #2a1a3a, #1a2a3a);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            color: rgba(200, 180, 220, 0.3);
+            flex-shrink: 0;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .user-info .name {
+            font-size: 16px;
+            font-weight: 400;
+            color: #d8d0e0;
+            letter-spacing: 2px;
+        }
+        .user-info .name span {
+            font-size: 13px;
+            color: rgba(180, 170, 190, 0.25);
+            font-weight: 300;
+            margin-left: 8px;
+        }
+        .user-info .stats {
+            margin-left: auto;
+            font-size: 12px;
+            color: rgba(180, 170, 190, 0.2);
+            letter-spacing: 1px;
+        }
+        .user-info .stats i {
+            margin-right: 4px;
+        }
+
+        /* ===== 发布区域 ===== */
+        .publish-area {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            padding: 20px 20px 16px;
+            margin-bottom: 28px;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.15);
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        .publish-area:focus-within {
+            border-color: rgba(160, 130, 200, 0.12);
+            box-shadow: 0 4px 40px rgba(80, 60, 120, 0.06);
+        }
+        .publish-area textarea {
+            width: 100%;
+            background: transparent;
+            border: none;
+            outline: none;
+            resize: vertical;
+            font-family: 'Noto Serif SC', serif;
+            font-size: 15px;
+            color: #d8d0e0;
+            line-height: 1.8;
+            min-height: 80px;
+            padding: 4px 0;
+            letter-spacing: 0.5px;
+        }
+        .publish-area textarea::placeholder {
+            color: rgba(180, 170, 190, 0.15);
+            font-weight: 300;
+            font-style: italic;
+        }
+        .publish-area .bottom-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: 14px;
+            border-top: 1px solid rgba(255, 255, 255, 0.03);
+            margin-top: 8px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .publish-area .actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .publish-area .actions label {
+            cursor: pointer;
+            color: rgba(180, 170, 190, 0.2);
+            font-size: 18px;
+            transition: color 0.3s ease;
+            padding: 4px 6px;
+            border-radius: 8px;
+        }
+        .publish-area .actions label:hover {
+            color: rgba(200, 180, 220, 0.5);
+        }
+        .publish-area .actions label.has-image {
+            color: rgba(160, 130, 200, 0.6);
+        }
+        .publish-area .actions input[type="file"] {
+            display: none;
+        }
+        .publish-area .btn-publish {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            color: rgba(200, 190, 210, 0.4);
+            padding: 8px 32px;
+            border-radius: 40px;
+            font-family: 'Noto Serif SC', serif;
+            font-size: 14px;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            background: linear-gradient(135deg, rgba(60, 40, 80, 0.1), rgba(40, 60, 80, 0.1));
+            backdrop-filter: blur(4px);
+        }
+        .publish-area .btn-publish:hover {
+            background: rgba(100, 80, 140, 0.2);
+            border-color: rgba(160, 130, 200, 0.15);
+            color: #e0d8e8;
+            box-shadow: 0 0 30px rgba(100, 80, 140, 0.06);
+        }
+        .publish-area .btn-publish:active {
+            transform: scale(0.97);
+        }
+
+        /* ===== 图片预览 ===== */
+        .image-preview {
+            margin-top: 12px;
+            position: relative;
+            display: none;
+            border-radius: 12px;
+            overflow: hidden;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+        }
+        .image-preview.show {
+            display: block;
+        }
+        .image-preview img {
+            width: 100%;
+            max-height: 260px;
+            object-fit: cover;
+            display: block;
+        }
+        .image-preview .remove-img {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: rgba(200, 180, 200, 0.4);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(4px);
+        }
+        .image-preview .remove-img:hover {
+            background: rgba(40, 20, 40, 0.9);
+            color: rgba(220, 200, 220, 0.7);
+        }
+
+        /* ===== 时间线 ===== */
+        .timeline {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding-top: 4px;
+        }
+
+        /* ===== 单条动态 ===== */
+        .post {
+            background: rgba(255, 255, 255, 0.015);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            padding: 18px 20px 12px;
+            transition: all 0.4s ease;
+            animation: fadeUp 0.5s ease forwards;
+            opacity: 0;
+            transform: translateY(12px);
+            backdrop-filter: blur(4px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+        .post:hover {
+            background: rgba(255, 255, 255, 0.025);
+            border-color: rgba(255, 255, 255, 0.06);
+        }
+        .post .post-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+        .post .post-header .post-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #2a1a3a, #1a2a3a);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: rgba(200, 180, 220, 0.25);
+            flex-shrink: 0;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+        }
+        .post .post-header .post-name {
+            font-size: 14px;
+            font-weight: 400;
+            color: #c8c0d0;
+            letter-spacing: 1px;
+        }
+        .post .post-header .post-time {
+            margin-left: auto;
+            font-size: 12px;
+            color: rgba(180, 170, 190, 0.2);
+            font-weight: 300;
+            letter-spacing: 0.5px;
+        }
+        .post .post-content {
+            font-size: 15px;
+            line-height: 1.9;
+            color: #d0c8d8;
+            letter-spacing: 0.5px;
+            white-space: pre-wrap;
+            word-break: break-word;
+            padding: 2px 0 4px;
+        }
+        .post .post-content:empty {
+            display: none;
+        }
+        .post .post-image {
+            margin-top: 12px;
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            transition: all 0.3s ease;
+            background: rgba(0, 0, 0, 0.2);
+        }
+        .post .post-image:hover {
+            border-color: rgba(160, 130, 200, 0.08);
+        }
+        .post .post-image img {
+            width: 100%;
+            max-height: 340px;
+            object-fit: cover;
+            display: block;
+            transition: transform 0.5s ease;
+        }
+        .post .post-image:hover img {
+            transform: scale(1.01);
+        }
+
+        /* ===== 互动栏 (点赞/评论/删除) ===== */
+        .post .post-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-top: 14px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255, 255, 255, 0.02);
+            flex-wrap: wrap;
+        }
+        .post .post-actions .action-btn {
+            background: none;
+            border: none;
+            color: rgba(180, 170, 190, 0.2);
+            font-size: 13px;
+            cursor: pointer;
+            padding: 4px 8px 4px 4px;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+            font-family: 'Noto Serif SC', serif;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .post .post-actions .action-btn i {
+            font-size: 14px;
+            transition: transform 0.3s ease;
+        }
+        .post .post-actions .action-btn:hover {
+            color: rgba(200, 180, 220, 0.4);
+        }
+        .post .post-actions .action-btn.liked {
+            color: rgba(200, 140, 180, 0.6);
+        }
+        .post .post-actions .action-btn.liked i {
+            transform: scale(1.1);
+        }
+        .post .post-actions .action-btn.delete-btn {
+            margin-left: auto;
+            color: rgba(180, 160, 180, 0.08);
+        }
+        .post .post-actions .action-btn.delete-btn:hover {
+            color: rgba(200, 160, 180, 0.2);
+        }
+        .post .post-actions .action-btn .count {
+            font-size: 12px;
+            font-weight: 300;
+            color: rgba(180, 170, 190, 0.15);
+            min-width: 12px;
+        }
+
+        /* ===== 评论区 ===== */
+        .post .comments-area {
+            margin-top: 12px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.02);
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .post .comments-area.open {
+            display: flex;
+        }
+        .post .comments-area .comment-item {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+            font-size: 13px;
+            padding: 4px 0;
+            color: rgba(200, 190, 210, 0.5);
+        }
+        .post .comments-area .comment-item .c-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.03);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: rgba(180, 170, 190, 0.15);
+            flex-shrink: 0;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+        }
+        .post .comments-area .comment-item .c-body {
+            flex: 1;
+            line-height: 1.6;
+        }
+        .post .comments-area .comment-item .c-body .c-name {
+            color: rgba(200, 190, 210, 0.2);
+            font-weight: 300;
+            margin-right: 8px;
+        }
+        .post .comments-area .comment-item .c-body .c-text {
+            color: rgba(200, 190, 210, 0.6);
+        }
+        .post .comments-area .comment-item .c-time {
+            font-size: 11px;
+            color: rgba(180, 170, 190, 0.08);
+            white-space: nowrap;
+            margin-top: 2px;
+        }
+        .post .comments-area .comment-input-wrap {
+            display: flex;
+            gap: 8px;
+            margin-top: 4px;
+            align-items: center;
+        }
+        .post .comments-area .comment-input-wrap input {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 30px;
+            padding: 8px 16px;
+            font-family: 'Noto Serif SC', serif;
+            font-size: 13px;
+            color: #c8c0d0;
+            outline: none;
+            transition: border 0.3s ease;
+        }
+        .post .comments-area .comment-input-wrap input::placeholder {
+            color: rgba(180, 170, 190, 0.1);
+            font-weight: 300;
+        }
+        .post .comments-area .comment-input-wrap input:focus {
+            border-color: rgba(160, 130, 200, 0.1);
+        }
+        .post .comments-area .comment-input-wrap .send-comment {
+            background: none;
+            border: none;
+            color: rgba(180, 170, 190, 0.1);
+            font-size: 16px;
+            cursor: pointer;
+            transition: color 0.3s ease;
+            padding: 4px 8px;
+        }
+        .post .comments-area .comment-input-wrap .send-comment:hover {
+            color: rgba(200, 180, 220, 0.3);
+        }
+
+        /* ===== 空状态 ===== */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px 40px;
+            color: rgba(180, 170, 190, 0.08);
+        }
+        .empty-state .icon {
+            font-size: 44px;
+            color: rgba(180, 170, 190, 0.04);
+            margin-bottom: 16px;
+        }
+        .empty-state .text {
+            font-size: 15px;
+            font-weight: 300;
+            letter-spacing: 2px;
+            line-height: 2;
+            color: rgba(180, 170, 190, 0.08);
+        }
+        .empty-state .text .line {
+            display: block;
+        }
+        .empty-state .text .line:last-child {
+            margin-top: 4px;
+            font-size: 13px;
+            color: rgba(180, 170, 190, 0.05);
+        }
+
+        /* ===== Lightbox ===== */
+        .lightbox {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.88);
+            backdrop-filter: blur(20px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+            padding: 40px 20px;
+            animation: fadeIn 0.4s ease;
+        }
+        .lightbox.show {
+            display: flex;
+        }
+        .lightbox img {
+            max-width: 90%;
+            max-height: 85vh;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+        }
+        .lightbox .close-lb {
+            position: absolute;
+            top: 28px;
+            right: 32px;
+            color: rgba(200, 190, 210, 0.1);
+            font-size: 28px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: none;
+            border: none;
+            padding: 8px;
+        }
+        .lightbox .close-lb:hover {
+            color: rgba(200, 190, 210, 0.3);
+            transform: rotate(90deg);
+        }
+
+        /* ===== 底部 ===== */
+        .footer {
+            text-align: center;
+            padding: 40px 0 16px;
+            font-size: 12px;
+            color: rgba(180, 170, 190, 0.04);
+            letter-spacing: 3px;
+            font-weight: 300;
+            border-top: 1px solid rgba(255, 255, 255, 0.01);
+            margin-top: 20px;
+        }
+        .footer span {
+            display: inline-block;
+            margin: 0 6px;
+        }
+
+        /* ===== 动画 ===== */
+        @keyframes fadeUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        /* ===== 响应式 ===== */
+        @media (max-width: 600px) {
+            body {
+                padding: 16px 12px 30px;
+            }
+            .header .logo {
+                font-size: 24px;
+                letter-spacing: 6px;
+            }
+            .header .sub {
+                font-size: 12px;
+                letter-spacing: 3px;
+            }
+            .user-info {
+                padding: 12px 16px;
+            }
+            .user-info .avatar {
+                width: 40px;
+                height: 40px;
+                font-size: 18px;
+            }
+            .user-info .name {
+                font-size: 14px;
+            }
+            .publish-area {
+                padding: 16px 16px 14px;
+            }
+            .publish-area textarea {
+                font-size: 14px;
+                min-height: 60px;
+            }
+            .publish-area .btn-publish {
+                padding: 6px 22px;
+                font-size: 13px;
+            }
+            .post {
+                padding: 14px 16px 12px;
+            }
+            .post .post-content {
+                font-size: 14px;
+                line-height: 1.8;
+            }
+            .post .post-image img {
+                max-height: 200px;
+            }
+            .lightbox img {
+                max-width: 95%;
+                max-height: 70vh;
+            }
+            .lightbox .close-lb {
+                top: 16px;
+                right: 20px;
+                font-size: 22px;
+            }
+            .empty-state {
+                padding: 40px 16px 30px;
+            }
+            .post .post-actions {
+                gap: 10px;
+            }
+            .post .comments-area .comment-input-wrap input {
+                font-size: 12px;
+                padding: 6px 14px;
+            }
+        }
+        @media (max-width: 400px) {
+            .publish-area .bottom-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .publish-area .btn-publish {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        /* ===== 微装饰 ===== */
+        .glow-dot {
+            display: inline-block;
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: rgba(180, 160, 200, 0.05);
+            margin: 0 6px;
+            vertical-align: middle;
+        }
+        .hint {
+            font-size: 12px;
+            color: rgba(180, 170, 190, 0.05);
+            font-weight: 300;
+            letter-spacing: 1px;
+            padding: 4px 0 0;
+        }
+        .hint i {
+            margin-right: 4px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 动态雨景 Canvas -->
+    <canvas id="rainCanvas"></canvas>
+
+    <div class="container">
+
+        <!-- ===== 头部 ===== -->
+        <header class="header">
+            <div class="logo">
+                <i class="fas fa-cloud-rain"></i>漫长的季节
+            </div>
+            <div class="sub">雨一直下 · 记忆在此停留</div>
+        </header>
+
+        <!-- ===== 用户信息 ===== -->
+        <div class="user-info">
+            <div class="avatar">
+                <i class="fas fa-user"></i>
+            </div>
+            <div class="name">
+                拾光者 <span>· 听雨</span>
+            </div>
+            <div class="stats">
+                <i class="fas fa-feather-alt"></i> <span id="postCount">0</span> 篇
+            </div>
+        </div>
+
+        <!-- ===== 发布区域 ===== -->
+        <div class="publish-area" id="publishArea">
+            <textarea id="postInput" placeholder="雨声里，写下此刻的思绪…" rows="3"></textarea>
+
+            <!-- 图片预览 -->
+            <div class="image-preview" id="imagePreview">
+                <img id="previewImg" src="" alt="预览" />
+                <button class="remove-img" id="removeImgBtn" title="移除图片">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="bottom-bar">
+                <div class="actions">
+                    <label for="imageInput" id="uploadLabel" title="添加图片">
+                        <i class="fas fa-image"></i>
+                    </label>
+                    <input type="file" id="imageInput" accept="image/*" />
+                    <span class="hint"><i class="fas fa-chevron-left"></i> 配图</span>
+                </div>
+                <button class="btn-publish" id="publishBtn">
+                    <i class="fas fa-pen" style="margin-right:6px;font-size:12px;"></i> 发布
+                </button>
+            </div>
+        </div>
+
+        <!-- ===== 时间线 ===== -->
+        <div class="timeline" id="timeline">
+            <!-- 由 JS 动态渲染 -->
+        </div>
+
+        <!-- ===== 底部 ===== -->
+        <div class="footer">
+            <span>✦</span> 雨声如旧 · 岁月漫长 <span>✦</span>
+        </div>
+
+    </div>
+
+    <!-- ===== Lightbox ===== -->
+    <div class="lightbox" id="lightbox">
+        <button class="close-lb" id="closeLb"><i class="fas fa-times"></i></button>
+        <img id="lbImg" src="" alt="查看大图" />
+    </div>
+
+    <script>
+        // ============================================================
+        //  1. 动态雨景 (Canvas)
+        // ============================================================
+        const canvas = document.getElementById('rainCanvas');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        let raindrops = [];
+
+        function resizeCanvas() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            initRaindrops();
+        });
+
+        class Raindrop {
+            constructor() {
+                this.reset();
+            }
+            reset() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height - height;
+                this.length = 8 + Math.random() * 12;
+                this.speed = 12 + Math.random() * 18;
+                this.opacity = 0.2 + Math.random() * 0.3;
+                this.width = 0.8 + Math.random() * 1.2;
+            }
+            fall() {
+                this.y += this.speed;
+                this.x += 0.4; // 微微斜风
+                if (this.y > height + 20) {
+                    this.reset();
+                    this.y = -this.length;
+                }
+            }
+            draw() {
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                ctx.lineTo(this.x + 1.5, this.y + this.length);
+                ctx.strokeStyle = `rgba(180, 190, 220, ${this.opacity * 0.25})`;
+                ctx.lineWidth = this.width;
+                ctx.stroke();
+            }
+        }
+
+        function initRaindrops() {
+            const count = Math.floor((width * height) / 3500);
+            raindrops = [];
+            for (let i = 0; i < Math.min(count, 300); i++) {
+                const drop = new Raindrop();
+                drop.y = Math.random() * height;
+                raindrops.push(drop);
+            }
+        }
+        initRaindrops();
+
+        function animateRain() {
+            ctx.clearRect(0, 0, width, height);
+            for (const drop of raindrops) {
+                drop.fall();
+                drop.draw();
+            }
+            requestAnimationFrame(animateRain);
+        }
+        animateRain();
+
+        // ============================================================
+        //  2. 数据层
+        // ============================================================
+        const STORAGE_KEY = 'long_season_posts';
+
+        function loadPosts() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (raw) {
+                    const data = JSON.parse(raw);
+                    if (Array.isArray(data)) return data;
+                }
+            } catch (_) { /* ignore */ }
+            return [];
+        }
+
+        function savePosts(posts) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(posts));
+        }
+
+        let posts = loadPosts();
+
+        // ============================================================
+        //  3. DOM 引用
+        // ============================================================
+        const timeline = document.getElementById('timeline');
+        const postInput = document.getElementById('postInput');
+        const publishBtn = document.getElementById('publishBtn');
+        const imageInput = document.getElementById('imageInput');
+        const imagePreview = document.getElementById('imagePreview');
+        const previewImg = document.getElementById('previewImg');
+        const removeImgBtn = document.getElementById('removeImgBtn');
+        const uploadLabel = document.getElementById('uploadLabel');
+        const postCount = document.getElementById('postCount');
+        const lightbox = document.getElementById('lightbox');
+        const lbImg = document.getElementById('lbImg');
+        const closeLb = document.getElementById('closeLb');
+
+        let editingImageData = null;
+
+        // ============================================================
+        //  4. 工具
+        // ============================================================
+        function formatTime(timestamp) {
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diff = (now - date) / 1000;
+            if (diff < 60) return '刚刚';
+            if (diff < 3600) return Math.floor(diff / 60) + '分钟前';
+            if (diff < 86400) return Math.floor(diff / 3600) + '小时前';
+            if (diff < 172800) return '昨天';
+            if (diff < 2592000) return Math.floor(diff / 86400) + '天前';
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            const h = String(date.getHours()).padStart(2, '0');
+            const min = String(date.getMinutes()).padStart(2, '0');
+            return `${y}-${m}-${d} ${h}:${min}`;
+        }
+
+        function generateId() {
+            return Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // ============================================================
+        //  5. 渲染
+        // ============================================================
+        function render() {
+            if (posts.length === 0) {
+                timeline.innerHTML = `
+                        <div class="empty-state">
+                            <div class="icon"><i class="fas fa-cloud-rain"></i></div>
+                            <div class="text">
+                                <span class="line">雨还在下，还没有写下任何字句</span>
+                                <span class="line">或许，此刻就是最好的开始</span>
+                            </div>
+                        </div>
+                    `;
+            } else {
+                const sorted = [...posts].sort((a, b) => b.timestamp - a.timestamp);
+                let html = '';
+                for (const p of sorted) {
+                    const timeStr = formatTime(p.timestamp);
+                    const hasImage = p.image && p.image.length > 0;
+                    const likeCount = p.likes || 0;
+                    const liked = p.liked || false;
+                    const comments = p.comments || [];
+
+                    html += `
+                            <div class="post" data-id="${p.id}">
+                                <div class="post-header">
+                                    <div class="post-avatar"><i class="fas fa-user"></i></div>
+                                    <span class="post-name">拾光者</span>
+                                    <span class="post-time">${timeStr}</span>
+                                </div>
+                                <div class="post-content">${escapeHtml(p.text)}</div>
+                                ${hasImage ? `<div class="post-image" data-img="${escapeHtml(p.image)}"><img src="${escapeHtml(p.image)}" alt="配图" loading="lazy" /></div>` : ''}
+                                
+                                <div class="post-actions">
+                                    <button class="action-btn like-btn ${liked ? 'liked' : ''}" data-id="${p.id}">
+                                        <i class="fas fa-heart"></i> <span class="count">${likeCount}</span>
+                                    </button>
+                                    <button class="action-btn comment-toggle" data-id="${p.id}">
+                                        <i class="fas fa-comment"></i> <span class="count">${comments.length}</span>
+                                    </button>
+                                    <button class="action-btn delete-btn" data-id="${p.id}">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </div>
+
+                                <div class="comments-area" id="comments-${p.id}">
+                                    ${comments.map(c => `
+                                        <div class="comment-item">
+                                            <div class="c-avatar"><i class="fas fa-user"></i></div>
+                                            <div class="c-body">
+                                                <span class="c-name">路人</span>
+                                                <span class="c-text">${escapeHtml(c.text)}</span>
+                                            </div>
+                                            <div class="c-time">${formatTime(c.timestamp)}</div>
+                                        </div>
+                                    `).join('')}
+                                    <div class="comment-input-wrap">
+                                        <input type="text" placeholder="说点什么..." class="comment-input" data-id="${p.id}" />
+                                        <button class="send-comment" data-id="${p.id}"><i class="fas fa-arrow-right"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                }
+                timeline.innerHTML = html;
+
+                // ---- 绑定事件 ----
+                // 点赞
+                document.querySelectorAll('.like-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const id = this.dataset.id;
+                        handleLike(id);
+                    });
+                });
+
+                // 评论展开/收起 (点击评论按钮)
+                document.querySelectorAll('.comment-toggle').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const id = this.dataset.id;
+                        const area = document.getElementById(`comments-${id}`);
+                        if (area) {
+                            area.classList.toggle('open');
+                            if (area.classList.contains('open')) {
+                                const input = area.querySelector('.comment-input');
+                                if (input) setTimeout(() => input.focus(), 100);
+                            }
+                        }
+                    });
+                });
+
+                // 发送评论
+                document.querySelectorAll('.send-comment').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const id = this.dataset.id;
+                        const wrap = this.closest('.comment-input-wrap');
+                        const input = wrap.querySelector('.comment-input');
+                        if (input && input.value.trim()) {
+                            handleComment(id, input.value.trim());
+                            input.value = '';
+                        }
+                    });
+                });
+                document.querySelectorAll('.comment-input').forEach(inp => {
+                    inp.addEventListener('keydown', function(e) {
+                        if (e.key === 'Enter') {
+                            const id = this.dataset.id;
+                            const text = this.value.trim();
+                            if (text) {
+                                handleComment(id, text);
+                                this.value = '';
+                            }
+                        }
+                    });
+                });
+
+                // 删除
+                document.querySelectorAll('.delete-btn').forEach(btn => {
+                    btn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        const id = this.dataset.id;
+                        if (confirm('确定要删除这条记录吗？')) {
+                            deletePost(id);
+                        }
+                    });
+                });
+
+                // 图片点击 lightbox
+                document.querySelectorAll('.post-image').forEach(el => {
+                    el.addEventListener('click', function() {
+                        const src = this.dataset.img;
+                        if (src) openLightbox(src);
+                    });
+                });
+            }
+
+            postCount.textContent = posts.length;
+        }
+
+        // ============================================================
+        //  6. 操作
+        // ============================================================
+        function addPost(text, image) {
+            if (!text.trim() && !image) return false;
+            const post = {
+                id: generateId(),
+                text: text.trim() || '',
+                image: image || null,
+                timestamp: Date.now(),
+                likes: 0,
+                liked: false,
+                comments: [],
+            };
+            posts.push(post);
+            savePosts(posts);
+            render();
+            return true;
+        }
+
+        function deletePost(id) {
+            posts = posts.filter(p => p.id !== id);
+            savePosts(posts);
+            render();
+        }
+
+        function handleLike(id) {
+            const post = posts.find(p => p.id === id);
+            if (!post) return;
+            post.liked = !post.liked;
+            post.likes = (post.likes || 0) + (post.liked ? 1 : -1);
+            if (post.likes < 0) post.likes = 0;
+            savePosts(posts);
+            render();
+        }
+
+        function handleComment(id, text) {
+            const post = posts.find(p => p.id === id);
+            if (!post) return;
+            if (!post.comments) post.comments = [];
+            post.comments.push({
+                id: generateId(),
+                text: text.trim(),
+                timestamp: Date.now(),
+            });
+            savePosts(posts);
+            render();
+            // 自动展开评论区
+            const area = document.getElementById(`comments-${id}`);
+            if (area) area.classList.add('open');
+        }
+
+        // ============================================================
+        //  7. Lightbox
+        // ============================================================
+        function openLightbox(src) {
+            lbImg.src = src;
+            lightbox.classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeLightbox() {
+            lightbox.classList.remove('show');
+            document.body.style.overflow = '';
+        }
+
+        closeLb.addEventListener('click', closeLightbox);
+        lightbox.addEventListener('click', function(e) {
+            if (e.target === this) closeLightbox();
+        });
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeLightbox();
+        });
+
+        // ============================================================
+        //  8. 图片处理
+        // ============================================================
+        function handleImageFile(file) {
+            if (!file) return;
+            if (file.size > 5 * 1024 * 1024) {
+                alert('图片大小不能超过 5MB。');
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const dataUrl = e.target.result;
+                compressImage(dataUrl, 800, 0.8, function(compressed) {
+                    editingImageData = compressed;
+                    previewImg.src = compressed;
+                    imagePreview.classList.add('show');
+                    uploadLabel.classList.add('has-image');
+                    imageInput.value = '';
+                });
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function compressImage(dataUrl, maxWidth, quality, callback) {
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                let w = img.width,
+                    h = img.height;
+                if (w > maxWidth) { h = (h * maxWidth) / w;
+                    w = maxWidth; }
+                canvas.width = w;
+                canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                ctx.drawImage(img, 0, 0, w, h);
+                callback(canvas.toDataURL('image/jpeg', quality));
+            };
+            img.src = dataUrl;
+        }
+
+        function removeImage() {
+            editingImageData = null;
+            imagePreview.classList.remove('show');
+            uploadLabel.classList.remove('has-image');
+            previewImg.src = '';
+            imageInput.value = '';
+        }
+
+        // ============================================================
+        //  9. 发布逻辑
+        // ============================================================
+        function handlePublish() {
+            const text = postInput.value;
+            const image = editingImageData;
+            if (!text.trim() && !image) {
+                const area = document.getElementById('publishArea');
+                area.style.borderColor = 'rgba(200,120,140,0.1)';
+                setTimeout(() => { area.style.borderColor = ''; }, 600);
+                return;
+            }
+            const success = addPost(text, image);
+            if (success) {
+                postInput.value = '';
+                removeImage();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+        // ============================================================
+        //  10. 事件绑定
+        // ============================================================
+        publishBtn.addEventListener('click', handlePublish);
+        postInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                handlePublish();
+            }
+        });
+        imageInput.addEventListener('change', function(e) {
+            if (this.files && this.files[0]) {
+                handleImageFile(this.files[0]);
+            }
+        });
+        removeImgBtn.addEventListener('click', removeImage);
+
+        // ============================================================
+        //  11. 启动
+        // ============================================================
+        render();
+        console.log('☔ 漫长的季节 · 雨声如旧');
+        console.log('💬 写下你的独白，或上传一张图片。');
+        console.log('❤️ 支持点赞与评论。');
+        console.log('📌 数据保存在浏览器本地。');
+    </script>
+
+</body>
+</html>
